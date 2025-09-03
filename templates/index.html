@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music @ Mood - AI Sketch Analyzer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/howler@2.2.4/dist/howler.min.js"></script>
+    <style>
+        .mood-card {
+            transition: all 0.3s ease;
+            transform: scale(0);
+        }
+        .mood-card.show {
+            transform: scale(1);
+        }
+        canvas {
+            border: 2px dashed #ddd;
+            cursor: crosshair;
+            display: block;
+            background-color: white;
+            max-width: 100%;
+            height: auto;
+        }
+        .drawing-tools button {
+            transition: all 0.2s ease;
+        }
+        .drawing-tools button.active {
+            background-color: #3b82f6;
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-purple-50 to-blue-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">Music @ Mood</h1>
+            <p class="text-gray-600">Draw your feelings, discover your soundtrack</p>
+        </div>
+
+        <!-- Main Content -->
+        <div class="max-w-4xl mx-auto">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                
+                <!-- Drawing Section -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h2 class="text-2xl font-semibold mb-4 text-gray-800">Draw Your Mood</h2>
+                    
+                    <!-- Drawing Tools -->
+                    <div class="drawing-tools flex gap-2 mb-4">
+                        <button id="blackPen" class="px-4 py-2 bg-gray-200 rounded active">Black Pen</button>
+                        <button id="grayPen" class="px-4 py-2 bg-gray-200 rounded">Gray Pen</button>
+                        <button id="eraser" class="px-4 py-2 bg-gray-200 rounded">Eraser</button>
+                        <button id="clearCanvas" class="px-4 py-2 bg-red-500 text-white rounded">Clear</button>
+                    </div>
+
+                    <!-- Canvas -->
+                    <canvas id="drawingCanvas" width="400" height="400" class="w-full rounded-lg"></canvas>
+                    
+                    <!-- Action Buttons -->
+                    <div class="mt-6 flex gap-4">
+                        <button id="analyzeBtn" class="flex-1 bg-blue-500 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-600 transition-colors">
+                            🎵 Analyze My Mood
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Results Section -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h2 class="text-2xl font-semibold mb-4 text-gray-800">Your Music Mood</h2>
+                    
+                    <!-- Loading State -->
+                    <div id="loadingState" class="hidden text-center py-8">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+                        <p class="mt-4 text-gray-600">Analyzing your drawing...</p>
+                    </div>
+
+                    <!-- Results Display -->
+                    <div id="resultsDisplay" class="hidden">
+                        <div id="moodCard" class="mood-card bg-gradient-to-r p-6 rounded-lg mb-6">
+                            <div class="text-center">
+                                <h3 id="moodTitle" class="text-3xl font-bold text-white mb-2"></h3>
+                                <p id="moodDescription" class="text-white/90 mb-4"></p>
+                                <div id="confidenceBar" class="w-full bg-white/20 rounded-full h-2">
+                                    <div id="confidenceFill" class="bg-white h-2 rounded-full transition-all duration-500"></div>
+                                </div>
+                                <p id="confidenceText" class="text-white/80 text-sm mt-2"></p>
+                            </div>
+                        </div>
+
+                        <!-- Music Player -->
+                        <div class="music-player bg-gray-50 rounded-lg p-4">
+                            <h4 class="font-semibold mb-3 text-gray-800">Recommended Tracks</h4>
+                            <div id="tracksList" class="space-y-2"></div>
+                        </div>
+
+                        <!-- Feedback Section -->
+                        <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+                            <h4 class="font-semibold mb-3 text-gray-800">Rate this prediction:</h4>
+                            <div id="ratingStars" class="flex gap-1">
+                                <span class="star cursor-pointer text-2xl text-gray-300 hover:text-yellow-400" data-rating="1">⭐</span>
+                                <span class="star cursor-pointer text-2xl text-gray-300 hover:text-yellow-400" data-rating="2">⭐</span>
+                                <span class="star cursor-pointer text-2xl text-gray-300 hover:text-yellow-400" data-rating="3">⭐</span>
+                                <span class="star cursor-pointer text-2xl text-gray-300 hover:text-yellow-400" data-rating="4">⭐</span>
+                                <span class="star cursor-pointer text-2xl text-gray-300 hover:text-yellow-400" data-rating="5">⭐</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Placeholder -->
+                    <div id="placeholderContent" class="text-center py-12">
+                        <div class="text-6xl mb-4">🎨</div>
+                        <p class="text-gray-500">Draw something to see your music mood!</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History Section -->
+            <div class="mt-8 bg-white rounded-lg shadow-lg p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-semibold text-gray-800">Mood History</h2>
+                    <button id="exportBtn" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors">
+                        📊 Export CSV
+                    </button>
+                </div>
+                <div id="historyList" class="space-y-3"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    class SketchAnalyzer {
+        constructor() {
+            this.canvas = document.getElementById('drawingCanvas');
+            
+            if (!this.canvas) {
+                console.error('Canvas element not found!');
+                alert('Canvas not found! Please refresh the page.');
+                return;
+            }
+            
+            this.ctx = this.canvas.getContext('2d');
+            
+            if (!this.ctx) {
+                console.error('Canvas context not available!');
+                alert('Canvas context not available!');
+                return;
+            }
+            
+            this.isDrawing = false;
+            this.currentTool = 'blackPen';
+            this.currentMusic = null;
+            this.lastHistoryId = null;
+            
+            console.log('SketchAnalyzer initialized successfully');
+            
+            this.setupCanvas();
+            this.setupEventListeners();
+            this.loadHistory();
+        }
+    
+        setupCanvas() {
+            // Set actual canvas size
+            this.canvas.width = 400;
+            this.canvas.height = 400;
+            
+            // Set canvas background to white
+            this.ctx.fillStyle = 'white';
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            
+            // Set default drawing properties
+            this.ctx.lineCap = 'round';
+            this.ctx.lineJoin = 'round';
+            this.ctx.lineWidth = 3;
+            this.ctx.strokeStyle = '#000000';
+            
+            console.log('Canvas setup complete:', this.canvas.width, 'x', this.canvas.height);
+        }
+    
+        setupEventListeners() {
+            // Canvas drawing events
+            this.canvas.addEventListener('mousedown', this.startDrawing.bind(this));
+            this.canvas.addEventListener('mousemove', this.draw.bind(this));
+            this.canvas.addEventListener('mouseup', this.stopDrawing.bind(this));
+            this.canvas.addEventListener('mouseout', this.stopDrawing.bind(this));
+    
+            // Touch events for mobile
+            this.canvas.addEventListener('touchstart', this.handleTouch.bind(this));
+            this.canvas.addEventListener('touchmove', this.handleTouch.bind(this));
+            this.canvas.addEventListener('touchend', this.stopDrawing.bind(this));
+    
+            // Tool buttons
+            document.getElementById('blackPen').addEventListener('click', () => this.selectTool('blackPen'));
+            document.getElementById('grayPen').addEventListener('click', () => this.selectTool('grayPen'));
+            document.getElementById('eraser').addEventListener('click', () => this.selectTool('eraser'));
+            document.getElementById('clearCanvas').addEventListener('click', this.clearCanvas.bind(this));
+    
+            // Analyze button
+            document.getElementById('analyzeBtn').addEventListener('click', this.analyzeMood.bind(this));
+    
+            // Export button
+            document.getElementById('exportBtn').addEventListener('click', this.exportHistory.bind(this));
+    
+            // Rating stars
+            document.querySelectorAll('.star').forEach(star => {
+                star.addEventListener('click', this.submitRating.bind(this));
+            });
+            
+            console.log('Event listeners setup complete');
+        }
+    
+        selectTool(tool) {
+            this.currentTool = tool;
+            
+            // Update UI
+            document.querySelectorAll('.drawing-tools button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById(tool).classList.add('active');
+            
+            // Set drawing properties
+            switch(tool) {
+                case 'blackPen':
+                    this.ctx.strokeStyle = '#000000';
+                    this.ctx.globalCompositeOperation = 'source-over';
+                    this.ctx.lineWidth = 3;
+                    break;
+                case 'grayPen':
+                    this.ctx.strokeStyle = '#666666';
+                    this.ctx.globalCompositeOperation = 'source-over';
+                    this.ctx.lineWidth = 3;
+                    break;
+                case 'eraser':
+                    this.ctx.globalCompositeOperation = 'destination-out';
+                    this.ctx.lineWidth = 10;
+                    break;
+            }
+            console.log('Tool selected:', tool);
+        }
+    
+        startDrawing(e) {
+            this.isDrawing = true;
+            const rect = this.canvas.getBoundingClientRect();
+            const scaleX = this.canvas.width / rect.width;
+            const scaleY = this.canvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+            
+            this.ctx.beginPath();
+            this.ctx.moveTo(x, y);
+            
+            console.log('Start drawing at:', x, y);
+        }
+    
+        draw(e) {
+            if (!this.isDrawing) return;
+            
+            const rect = this.canvas.getBoundingClientRect();
+            const scaleX = this.canvas.width / rect.width;
+            const scaleY = this.canvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+            
+            this.ctx.lineTo(x, y);
+            this.ctx.stroke();
+        }
+    
+        stopDrawing() {
+            this.isDrawing = false;
+            this.ctx.beginPath();
+        }
+    
+        handleTouch(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent(e.type === 'touchstart' ? 'mousedown' : 
+                                            e.type === 'touchmove' ? 'mousemove' : 'mouseup', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            this.canvas.dispatchEvent(mouseEvent);
+        }
+    
+        clearCanvas() {
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            this.setupCanvas();
+            this.hideResults();
+        }
+    
+        async analyzeMood() {
+            // Check if canvas is empty
+            const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+            const pixels = imageData.data;
+            let hasDrawing = false;
+            
+            for (let i = 0; i < pixels.length; i += 4) {
+                if (pixels[i] !== 255 || pixels[i + 1] !== 255 || pixels[i + 2] !== 255) {
+                    hasDrawing = true;
+                    break;
+                }
+            }
+            
+            if (!hasDrawing) {
+                alert('Please draw something first!');
+                return;
+            }
+    
+            this.showLoading();
+            
+            try {
+                const imageDataURL = this.canvas.toDataURL('image/png');
+                
+                const response = await fetch('/predict_mood', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ image: imageDataURL })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    this.displayMoodResult(result);
+                    this.lastHistoryId = result.history_id;
+                    this.loadHistory();
+                } else {
+                    alert('Error: ' + result.error);
+                    this.hideLoading();
+                }
+                
+            } catch (error) {
+                console.error('Error analyzing mood:', error);
+                alert('Failed to analyze mood. Please try again.');
+                this.hideLoading();
+            }
+        }
+    
+        showLoading() {
+            document.getElementById('placeholderContent').classList.add('hidden');
+            document.getElementById('resultsDisplay').classList.add('hidden');
+            document.getElementById('loadingState').classList.remove('hidden');
+        }
+    
+        hideLoading() {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('placeholderContent').classList.remove('hidden');
+        }
+    
+        hideResults() {
+            document.getElementById('resultsDisplay').classList.add('hidden');
+            document.getElementById('placeholderContent').classList.remove('hidden');
+            document.getElementById('loadingState').classList.add('hidden');
+        }
+    
+        displayMoodResult(result) {
+            const { mood, confidence, music } = result;
+            
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('placeholderContent').classList.add('hidden');
+            document.getElementById('resultsDisplay').classList.remove('hidden');
+            
+            const moodCard = document.getElementById('moodCard');
+            moodCard.style.background = `linear-gradient(135deg, ${music.color}, ${this.adjustColor(music.color, -20)})`;
+            
+            document.getElementById('moodTitle').textContent = mood.charAt(0).toUpperCase() + mood.slice(1);
+            document.getElementById('moodDescription').textContent = music.description;
+            
+            const confidencePercent = Math.round(confidence * 100);
+            document.getElementById('confidenceFill').style.width = `${confidencePercent}%`;
+            document.getElementById('confidenceText').textContent = `${confidencePercent}% confidence`;
+            
+            this.displayTracks(music.tracks);
+            
+            setTimeout(() => {
+                moodCard.classList.add('show');
+            }, 100);
+            
+            this.resetRatingStars();
+        }
+    
+        adjustColor(hex, percent) {
+            const num = parseInt(hex.replace('#', ''), 16);
+            const amt = Math.round(2.55 * percent);
+            const R = (num >> 16) + amt;
+            const G = (num >> 8 & 0x00FF) + amt;
+            const B = (num & 0x0000FF) + amt;
+            
+            return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+                          (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+                          (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
+        }
+    
+        displayTracks(tracks) {
+            const tracksList = document.getElementById('tracksList');
+            tracksList.innerHTML = '';
+            
+            tracks.forEach((track, index) => {
+                const trackElement = document.createElement('div');
+                trackElement.className = 'flex items-center justify-between bg-white p-3 rounded-lg border';
+                trackElement.innerHTML = `
+                    <div class="flex items-center">
+                        <span class="text-sm font-medium text-gray-700">Track ${index + 1}: ${track}</span>
+                    </div>
+                    <button class="play-btn bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 transition-colors" data-track="${track}">
+                        ▶️ Play
+                    </button>
+                `;
+                tracksList.appendChild(trackElement);
+            });
+            
+            document.querySelectorAll('.play-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    this.playTrack(e.target.dataset.track, e.target);
+                });
+            });
+        }
+    
+        playTrack(trackName, button) {
+            console.log('Demo: Playing', trackName);
+            alert(`🎵 Demo Mode\n\nNow playing: "${trackName}"\n\nThis is a demo deployment. Audio files are not included.`);
+        }
+        
+        resetRatingStars() {
+            document.querySelectorAll('.star').forEach(star => {
+                star.classList.remove('text-yellow-400');
+                star.classList.add('text-gray-300');
+            });
+        }
+    
+        async submitRating(e) {
+            const rating = parseInt(e.target.dataset.rating);
+            
+            document.querySelectorAll('.star').forEach((star, index) => {
+                if (index < rating) {
+                    star.classList.remove('text-gray-300');
+                    star.classList.add('text-yellow-400');
+                } else {
+                    star.classList.remove('text-yellow-400');
+                    star.classList.add('text-gray-300');
+                }
+            });
+            
+            if (this.lastHistoryId) {
+                try {
+                    await fetch('/feedback', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            history_id: this.lastHistoryId,
+                            rating: rating
+                        })
+                    });
+                } catch (error) {
+                    console.error('Error submitting feedback:', error);
+                }
+            }
+        }
+    
+        async loadHistory() {
+            try {
+                const response = await fetch('/history');
+                const data = await response.json();
+                
+                const historyList = document.getElementById('historyList');
+                
+                if (data.history && data.history.length > 0) {
+                    historyList.innerHTML = data.history.map(item => `
+                        <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                            <div>
+                                <span class="font-medium text-gray-800">${item.mood}</span>
+                                <span class="text-gray-500 text-sm ml-2">${new Date(item.timestamp).toLocaleDateString()}</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm text-gray-600">${Math.round(item.confidence * 100)}%</span>
+                                ${item.feedback ? `<span class="text-yellow-400">${'⭐'.repeat(item.feedback)}</span>` : ''}
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    historyList.innerHTML = '<p class="text-gray-500 text-center py-4">No history yet. Draw something to get started!</p>';
+                }
+            } catch (error) {
+                console.error('Error loading history:', error);
+            }
+        }
+    
+        async exportHistory() {
+            try {
+                const response = await fetch('/export_csv');
+                const csvData = await response.text();
+                
+                const blob = new Blob([csvData], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `mood_history_${new Date().toISOString().split('T')[0]}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error('Error exporting history:', error);
+                alert('Failed to export history');
+            }
+        }
+    }
+    
+    // Initialize the application
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('DOM loaded, initializing SketchAnalyzer...');
+        new SketchAnalyzer();
+    });
+    </script>
+</body>
+</html>
